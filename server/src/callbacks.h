@@ -1,7 +1,7 @@
 /*
  *  callbacks.h
  *  WebSpec project
- *  
+ *
  *  Copyright (c) 2013 Matthew McNamara
  *  BSD 2-Clause License
  *  http://opensource.org/licenses/BSD-2-Clause
@@ -31,7 +31,7 @@ extern IPlayerInfoManager *playerInfoManager;
 extern IServerGameEnts *serverGameEnts;
 extern CGlobalVars *gpGlobals;
 
-extern std::vector<struct libwebsocket *> ws_spectators;
+extern CUtlVector<struct libwebsocket *> ws_spectators;
 extern string_t ws_teamName[2];
 
 extern void SendPacketToAll(char *buffer, int length);
@@ -42,10 +42,10 @@ extern void SendPacketToOne(char *buffer, int length, struct libwebsocket *wsi);
 // static methods for various libwebsockets callbacks
 //=================================================================================
 
-extern int webspec_callback_http(struct libwebsocket_context *ctx, struct libwebsocket *wsi, 
+extern int webspec_callback_http(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 	enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len);
 
-extern int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi, 
+extern int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 	enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len);
 
 static struct libwebsocket_protocols wsProtocols[] = {

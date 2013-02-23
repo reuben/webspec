@@ -1,7 +1,7 @@
 /*
  *  webspec.cpp
  *  WebSpec project
- *  
+ *
  *  Copyright (c) 2013 Matthew McNamara
  *  BSD 2-Clause License
  *  http://opensource.org/licenses/BSD-2-Clause
@@ -20,7 +20,7 @@ struct WSServerThreadParams_t {
 
 static unsigned WSServerThread(void *params) {
 	WSServerThreadParams_t *vars = (WSServerThreadParams_t *)params;
-	
+
 	while (ws_shouldListen) {
 		libwebsocket_service(vars->ctx, 50); //check for events every 50ms
 	}
@@ -28,7 +28,7 @@ static unsigned WSServerThread(void *params) {
 	delete vars;
 	return 0;
 }
-// 
+//
 // The plugin is a static singleton that is exported as an interface
 //
 WebSpecPlugin g_WebSpecPlugin;
@@ -54,7 +54,6 @@ WebSpecPlugin::~WebSpecPlugin()
 bool WebSpecPlugin::Load(	CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory )
 {
 	ConnectTier1Libraries( &interfaceFactory, 1 );
-	ConnectTier2Libraries( &interfaceFactory, 1 );
 
 	playerInfoManager = (IPlayerInfoManager *)gameServerFactory(INTERFACEVERSION_PLAYERINFOMANAGER,NULL);
 	if ( !playerInfoManager )
@@ -95,7 +94,7 @@ bool WebSpecPlugin::Load(	CreateInterfaceFn interfaceFactory, CreateInterfaceFn 
 	ws_teamName[1] = MAKE_STRING("RED");
 	ws_teamReadyState[0] = false;
 	ws_teamReadyState[1] = false;
-	
+
 	WSOffsets::PrepareOffsets();
 
 	//Init WebSocket server
@@ -148,7 +147,6 @@ void WebSpecPlugin::Unload( void )
 	//Context will be cleaned up in thread, thread should then end
 
 	ConVar_Unregister( );
-	DisconnectTier2Libraries( );
 	DisconnectTier1Libraries( );
 }
 
@@ -197,7 +195,7 @@ void WebSpecPlugin::ServerActivate( edict_t *pEdictList, int edictCount, int cli
 void WebSpecPlugin::GameFrame( bool simulating )
 {
 	if (gpGlobals->curtime - g_lastUpdateTime > WEBSPEC_UPDATE_RATE_IN_SECONDS) {
-		
+
 		char *buffer = (char *)malloc(2048);
 		Vector playerOrigin;
 		QAngle playerAngles;
@@ -228,13 +226,13 @@ void WebSpecPlugin::GameFrame( bool simulating )
 			if (playerClass == TFClass_Medic) {
 				CBaseCombatCharacter *playerCombatCharacter = CBaseEntity_MyCombatCharacterPointer(playerEntity);
 				CBaseCombatWeapon *slot1Weapon = CBaseCombatCharacter_Weapon_GetSlot(playerCombatCharacter, 1);
-				
+
 				playerUberCharge = *MakePtr(float*, slot1Weapon, WSOffsets::pCWeaponMedigun__m_flChargeLevel);
 			} else {
 				playerUberCharge = 0.0f;
 			}
 
-			bufferLength = sprintf(buffer, "%s%d:%d:%d:%d:%d:%d", buffer, userid, 
+			bufferLength = sprintf(buffer, "%s%d:%d:%d:%d:%d:%d", buffer, userid,
 				Round(playerOrigin.x), Round(playerOrigin.y), Round(playerAngles.y),
 				health, Round(playerUberCharge));
 		}
@@ -271,7 +269,7 @@ void WebSpecPlugin::ClientDisconnect( edict_t *pEntity )
 }
 
 //---------------------------------------------------------------------------------
-// Purpose: called on 
+// Purpose: called on
 //---------------------------------------------------------------------------------
 void WebSpecPlugin::ClientPutInServer( edict_t *pEntity, char const *playername )
 {
@@ -336,7 +334,7 @@ void WebSpecPlugin::FireGameEvent( KeyValues * event )
 		EventHandler_TeamInfo(event);
 		break;
 	}
-	case Event_PlayerDeath: 
+	case Event_PlayerDeath:
 	{
 		EventHandler_PlayerDeath(event);
 		break;
@@ -355,17 +353,17 @@ void WebSpecPlugin::FireGameEvent( KeyValues * event )
 //=================================================================================
 
 void WebSpecPlugin::EventHandler_TeamInfo(KeyValues *event) {
-	if (ws_spectators.size() == 0) return;
+	if (ws_spectators.Count() == 0) return;
 
 	int userID = event->GetInt("userid");
 	int clientIndex = GetClientIndexForUserID(userID);
 	int teamID = playerInfoManager->GetPlayerInfo(engine->PEntityOfEntIndex(clientIndex))->GetTeamIndex();
 	bool nameChanged = (event->GetInt("namechange") > 0);
-	
+
 	string_t teamName;
 	int readyState;
 	char *buffer = (char*)malloc(30);
-	
+
 	if (teamID == TFTeam_Red) {
 		if (nameChanged)
 			ws_teamName[1] = MAKE_STRING(event->GetString("newname"));
@@ -391,7 +389,7 @@ void WebSpecPlugin::EventHandler_TeamInfo(KeyValues *event) {
 }
 
 void WebSpecPlugin::EventHandler_PlayerDeath(KeyValues *event) {
-	if (ws_spectators.size() == 0) return;
+	if (ws_spectators.Count() == 0) return;
 
 	int victim = event->GetInt("userid");
 	int attacker = event->GetInt("attacker");
@@ -405,7 +403,7 @@ void WebSpecPlugin::EventHandler_PlayerDeath(KeyValues *event) {
 }
 
 void WebSpecPlugin::EventHandler_PlayerSpawn(KeyValues *event) {
-	if (ws_spectators.size() == 0) return;
+	if (ws_spectators.Count() == 0) return;
 
 	int userid = event->GetInt("userid");
 	int tfClass = event->GetInt("class");
@@ -427,12 +425,10 @@ void SendPacketToAll(char *buffer, int length) {
 	for (int i=0; i < length; i++) {
 		packetBuffer[LWS_SEND_BUFFER_PRE_PADDING + i] = buffer[i];
 	}
-	
+
 	//Send to all clients
-	struct libwebsocket *wsi;
-	for (unsigned int i=0; i<ws_spectators.size(); i++) {
-		wsi = ws_spectators.at(i);
-		libwebsocket_write(wsi, &packetBuffer[LWS_SEND_BUFFER_PRE_PADDING], length, LWS_WRITE_TEXT);
+	for (int i=0; i<ws_spectators.Count(); i++) {
+		libwebsocket_write(ws_spectators[i], &packetBuffer[LWS_SEND_BUFFER_PRE_PADDING], length, LWS_WRITE_TEXT);
 	}
 	free(packetBuffer);
 }
@@ -444,7 +440,7 @@ void SendPacketToOne(char *buffer, int length, struct libwebsocket *wsi) {
 	for (int i=0; i < length; i++) {
 		packetBuffer[LWS_SEND_BUFFER_PRE_PADDING + i] = buffer[i];
 	}
-	
+
 	//Send to given client
 	libwebsocket_write(wsi, &packetBuffer[LWS_SEND_BUFFER_PRE_PADDING], length, LWS_WRITE_TEXT);
 	free(packetBuffer);

@@ -1,7 +1,7 @@
 /*
  *  callbacks.h
  *  WebSpec project
- *  
+ *
  *  Copyright (c) 2013 Matthew McNamara
  *  BSD 2-Clause License
  *  http://opensource.org/licenses/BSD-2-Clause
@@ -14,7 +14,7 @@
 // Default HTTP callback
 // Required by libwebsockets, but not required to actually do anything
 //=================================================================================
-int webspec_callback_http(struct libwebsocket_context *ctx, struct libwebsocket *wsi, 
+int webspec_callback_http(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 	enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len)
 {
 	return 0;
@@ -24,15 +24,15 @@ int webspec_callback_http(struct libwebsocket_context *ctx, struct libwebsocket 
 // Callback for the 'webspec' protocol
 // Manages spectator connections & sending Initial messages to new spectators
 //=================================================================================
-int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi, 
+int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 	enum libwebsocket_callback_reasons reason, void *user, void *in, size_t len)
 {
 	switch (reason) {
 		case LWS_CALLBACK_ESTABLISHED:
 		{
 			// New connection
-			ws_spectators.push_back(wsi);
-			
+			ws_spectators.AddToTail(wsi);
+
 			// Send basic game info to let client set up
 			// MapName, Server name (may remove), current team names (TF2 5-letter, not full)
 			char *buffer = (char*)malloc(256);
@@ -60,18 +60,18 @@ int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 					int maxHealth = playerInfo->GetMaxHealth();
 					bool alive = !playerInfo->IsDead();
 					string_t playerName = MAKE_STRING(playerInfo->GetName());
-					
+
 					//Pointer magic to get TF2 class
 					CBaseEntity *playerEntity = serverGameEnts->EdictToBaseEntity(engine->PEntityOfEntIndex(i));
 					int playerClass = *MakePtr(int*, playerEntity, WSOffsets::pCTFPlayer__m_iClass);
 
 					float uberCharge = 0.0f;
-					
-					if (playerClass == TFClass_Medic) { 
+
+					if (playerClass == TFClass_Medic) {
 						//Way more pointer magic to get ubercharge from medigun
 						CBaseCombatCharacter *playerCombatCharacter = CBaseEntity_MyCombatCharacterPointer(playerEntity);
 						CBaseCombatWeapon *slot1Weapon = CBaseCombatCharacter_Weapon_GetSlot(playerCombatCharacter, 1);
-						
+
 						uberCharge = *MakePtr(float*, slot1Weapon, WSOffsets::pCWeaponMedigun__m_flChargeLevel);
 					}
 
@@ -92,7 +92,7 @@ int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 
 			//Create buffer for response, + LibWebsockets padding (don't worry about this)
 			//len + 1 for '.'
-			unsigned char *buffer = (unsigned char *) malloc(len + 1 + 
+			unsigned char *buffer = (unsigned char *) malloc(len + 1 +
 				LWS_SEND_BUFFER_PRE_PADDING + LWS_SEND_BUFFER_POST_PADDING);
 
 			//Put initial . into buffer, after padding
@@ -112,9 +112,7 @@ int webspec_callback(struct libwebsocket_context *ctx, struct libwebsocket *wsi,
 		}
 		case LWS_CALLBACK_CLOSED:
 		{
-			std::vector<struct libwebsocket *>::iterator it;
-			it = std::find(ws_spectators.begin(), ws_spectators.end(), wsi);
-			ws_spectators.erase(it);
+			ws_spectators.FindAndRemove(wsi);
 		}
 		default:
 			break;

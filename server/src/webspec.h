@@ -1,7 +1,7 @@
 /*
  *  webspec.h
  *  WebSpec project
- *  
+ *
  *  Copyright (c) 2013 Matthew McNamara
  *  BSD 2-Clause License
  *  http://opensource.org/licenses/BSD-2-Clause
@@ -51,7 +51,7 @@ CGlobalVars *gpGlobals = NULL;
 
 #define WEBSPEC_UPDATE_RATE_IN_SECONDS 0.3
 
-std::vector<struct libwebsocket *> ws_spectators;
+CUtlVector<struct libwebsocket *> ws_spectators;
 string_t ws_teamName[2];
 bool ws_teamReadyState[2];
 bool ws_shouldListen = false;
@@ -70,7 +70,7 @@ public:
 	virtual void			Unload( void );
 	virtual void			Pause( void );
 	virtual void			UnPause( void );
-	virtual const char     *GetPluginDescription( void );      
+	virtual const char     *GetPluginDescription( void );
 	virtual void			LevelInit( char const *pMapName );
 	virtual void			ServerActivate( edict_t *pEdictList, int edictCount, int clientMax );
 	virtual void			GameFrame( bool simulating );
